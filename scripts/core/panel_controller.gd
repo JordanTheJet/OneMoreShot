@@ -23,6 +23,7 @@ var _panel_timer: Timer
 var _hint_timer: Timer
 var _fallback_timer: Timer
 var _is_transitioning: bool = false
+var _panel_started: bool = false  # Guard against rapid panel starts
 
 
 func _ready() -> void:
@@ -59,6 +60,10 @@ func load_panels(panel_data_array: Array[PanelData]) -> void:
 	panels = panel_data_array
 	_build_panel_strip()
 
+	# Start first panel after building
+	if panels.size() > 0:
+		call_deferred("_start_panel", 0)
+
 
 func _build_panel_strip() -> void:
 	# Clear existing panels
@@ -67,11 +72,13 @@ func _build_panel_strip() -> void:
 
 	var x_offset: float = 0.0
 
+	# print("Building %d panels..." % panels.size())  # Debug
 	for i in range(panels.size()):
 		var panel_data := panels[i]
 		var panel_node := _create_panel_node(panel_data, i)
 		panel_node.position.x = x_offset
 		panel_container.add_child(panel_node)
+		# print("  Panel %d: x=%d, width=%d" % [i, int(x_offset), panel_data.panel_width])  # Debug
 		x_offset += panel_data.panel_width
 
 
@@ -144,6 +151,8 @@ func _create_placeholder_texture(width: int, height: int, index: int) -> ImageTe
 
 
 func _start_panel(index: int) -> void:
+	# print("_start_panel(%d) called" % index)  # Debug
+
 	if index < 0 or index >= panels.size():
 		scene_completed.emit()
 		return
@@ -153,10 +162,17 @@ func _start_panel(index: int) -> void:
 
 	panel_changed.emit(index)
 
+	# Ensure camera is active and properly configured
+	if camera:
+		camera.make_current()
+		camera.zoom = Vector2(1, 1)  # Ensure default zoom
+
 	# Move camera to panel
 	var target_x: float = _calculate_panel_camera_x(index)
 	camera.position.x = target_x
 	camera.position.y = 540  # Center vertically
+
+	print("Panel %d" % index)  # Clean output
 
 	# Handle interaction or auto-advance
 	if panel_data.interaction_type != Enums.InteractionType.NONE:
@@ -255,10 +271,23 @@ func _on_panel_timer_timeout() -> void:
 func _on_hint_timer_timeout() -> void:
 	if is_waiting_for_interaction and interaction_prompt:
 		var panel_data := panels[current_panel_index]
-		if panel_data.interaction_hint != "":
-			interaction_prompt.show_hint(panel_data.interaction_hint)
-		else:
-			interaction_prompt.show_default_hint(current_interaction_type)
+		# Show hint label if it exists
+		var hint_label = interaction_prompt.get_node_or_null("HintLabel")
+		if hint_label:
+			hint_label.text = panel_data.interaction_hint if panel_data.interaction_hint != "" else _get_default_hint(current_interaction_type)
+			interaction_prompt.visible = true
+
+
+func _get_default_hint(interaction_type: Enums.InteractionType) -> String:
+	match interaction_type:
+		Enums.InteractionType.CATCH:
+			return "Raise both hands to catch"
+		Enums.InteractionType.PASS:
+			return "Push forward to pass"
+		Enums.InteractionType.BALLOON:
+			return "Gently push forward"
+		_:
+			return ""
 
 
 func _on_fallback_timer_timeout() -> void:

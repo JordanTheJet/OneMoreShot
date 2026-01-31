@@ -1,0 +1,22 @@
+# Godot 4+ specific ignores
+.godot/
+
+# Godot-specific ignores
+*.import
+*.uid
+
+# Imported translations (uncomment if you don't commit localized translations)
+# *.translation
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Downloaded model files
+python/hand_landmarker.task
+
+# OS files
+.DS_Store
+Thumbs.db

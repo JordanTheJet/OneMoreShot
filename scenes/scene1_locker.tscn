@@ -13,7 +13,6 @@ auto_start = true
 
 [node name="Camera2D" type="Camera2D" parent="PanelController"]
 position = Vector2(960, 540)
-anchor_mode = 0
 
 [node name="PanelContainer" type="Node2D" parent="PanelController"]
 

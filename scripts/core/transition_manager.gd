@@ -14,8 +14,6 @@ var _transition_layer: CanvasLayer
 var _color_rect: ColorRect
 var _is_transitioning: bool = false
 
-@onready var _dissolve_material: ShaderMaterial = preload("res://shaders/dissolve_material.tres") if ResourceLoader.exists("res://shaders/dissolve_material.tres") else null
-
 
 func _ready() -> void:
 	_setup_transition_layer()

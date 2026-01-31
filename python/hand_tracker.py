@@ -146,7 +146,7 @@ async def broadcast_data(data: dict):
     message = json.dumps(data)
     disconnected = set()
 
-    for client in connected_clients:
+    for client in list(connected_clients):  # Copy to list to avoid modification during iteration
         try:
             await client.send(message)
         except websockets.exceptions.ConnectionClosed:
