@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="PanelData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/panel_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+panel_id = "scene4_template"
+duration = 4.0
+interaction_type = 0
+background_path = ""
+foreground_layers = []
+parallax_depths = []
+focus_point = Vector2(0.5, 0.5)
+panel_width = 1920
+transition_to_next = 1
+custom_transition_duration = 0.0
+interaction_hint = ""
+hint_delay = 5.0
+fallback_timeout = 15.0

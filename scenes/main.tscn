@@ -1,0 +1,11 @@
+[gd_scene load_steps=2 format=3 uid="uid://cmainscene0001"]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+
+[node name="Main" type="Node"]
+script = ExtResource("1_main")
+
+[node name="StartDelay" type="Timer" parent="."]
+wait_time = 0.5
+one_shot = true
+autostart = true
