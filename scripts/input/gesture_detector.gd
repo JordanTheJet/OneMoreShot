@@ -6,6 +6,7 @@ extends Node
 signal gesture_detected(gesture_type: Enums.InteractionType)
 signal gesture_progress(gesture_type: Enums.InteractionType, progress: float)
 signal hands_detected(count: int)
+signal landmarks_updated(left_hand: Array, right_hand: Array)
 
 # Hold time for gesture confirmation
 const GESTURE_HOLD_TIME := 0.5  # Seconds to hold gesture
@@ -61,6 +62,13 @@ func _on_landmarks_received(data: Dictionary) -> void:
 
 	var num_hands: int = data.get("num_hands", 0)
 	hands_detected.emit(num_hands)
+
+	# Extract landmark data for visualization
+	var left_hand_data: Dictionary = data.get("left_hand", {})
+	var right_hand_data: Dictionary = data.get("right_hand", {})
+	var left_landmarks: Array = left_hand_data.get("landmarks", [])
+	var right_landmarks: Array = right_hand_data.get("landmarks", [])
+	landmarks_updated.emit(left_landmarks, right_landmarks)
 
 	# Get gesture data from Python bridge
 	var gestures: Dictionary = data.get("gestures", {})

@@ -30,11 +30,22 @@ var _action_ui: CanvasLayer
 var _action_label: Label
 var _action_bg: ColorRect
 
+# Hand overlay
+var _hand_overlay: CanvasLayer
+var _hand_draw: Control
+var _left_landmarks: Array = []
+var _right_landmarks: Array = []
+
+# Success effect
+var _success_overlay: ColorRect
+var _progress_ring: Control
+
 
 func _ready() -> void:
 	_setup_timers()
 	_setup_gesture_connections()
 	_setup_action_ui()
+	_setup_hand_overlay()
 
 	if auto_start and panels.size() > 0:
 		call_deferred("_start_panel", 0)
@@ -66,6 +77,96 @@ func _setup_action_ui() -> void:
 
 	# Initially hidden
 	_action_bg.visible = false
+
+
+func _setup_hand_overlay() -> void:
+	# Create CanvasLayer for hand visualization
+	_hand_overlay = CanvasLayer.new()
+	_hand_overlay.layer = 5  # Below action UI but above game
+	add_child(_hand_overlay)
+
+	# Create custom draw control for hands
+	_hand_draw = Control.new()
+	_hand_draw.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_hand_draw.size = Vector2(1024, 1024)  # Match image size
+	_hand_draw.draw.connect(_draw_hands)
+	_hand_overlay.add_child(_hand_draw)
+
+	# Success flash overlay
+	_success_overlay = ColorRect.new()
+	_success_overlay.color = Color(1, 1, 1, 0)
+	_success_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_success_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hand_overlay.add_child(_success_overlay)
+
+	# Progress ring control
+	_progress_ring = Control.new()
+	_progress_ring.set_anchors_preset(Control.PRESET_CENTER)
+	_progress_ring.size = Vector2(200, 200)
+	_progress_ring.position = Vector2(412, 412)  # Center of 1024x1024
+	_progress_ring.draw.connect(_draw_progress_ring)
+	_progress_ring.visible = false
+	_hand_overlay.add_child(_progress_ring)
+
+
+var _current_progress: float = 0.0
+
+func _draw_hands() -> void:
+	if not is_waiting_for_interaction:
+		return
+
+	# Draw left hand
+	_draw_hand_landmarks(_left_landmarks, Color(0.2, 0.8, 1.0, 0.8))  # Cyan
+	# Draw right hand
+	_draw_hand_landmarks(_right_landmarks, Color(1.0, 0.5, 0.2, 0.8))  # Orange
+
+
+func _draw_hand_landmarks(landmarks: Array, color: Color) -> void:
+	if landmarks.size() < 21:
+		return
+
+	# Hand connections for drawing skeleton
+	var connections := [
+		[0, 1], [1, 2], [2, 3], [3, 4],      # Thumb
+		[0, 5], [5, 6], [6, 7], [7, 8],      # Index
+		[0, 9], [9, 10], [10, 11], [11, 12], # Middle
+		[0, 13], [13, 14], [14, 15], [15, 16], # Ring
+		[0, 17], [17, 18], [18, 19], [19, 20], # Pinky
+		[5, 9], [9, 13], [13, 17]            # Palm
+	]
+
+	# Convert normalized coordinates to screen coordinates
+	var points: Array[Vector2] = []
+	for lm in landmarks:
+		var x: float = (1.0 - lm.get("x", 0.5)) * 1024  # Mirror horizontally
+		var y: float = lm.get("y", 0.5) * 1024
+		points.append(Vector2(x, y))
+
+	# Draw connections
+	for conn in connections:
+		if conn[0] < points.size() and conn[1] < points.size():
+			_hand_draw.draw_line(points[conn[0]], points[conn[1]], color, 3.0)
+
+	# Draw landmarks as circles
+	for point in points:
+		_hand_draw.draw_circle(point, 8, color)
+
+
+func _draw_progress_ring() -> void:
+	if _current_progress <= 0:
+		return
+
+	var center := Vector2(100, 100)
+	var radius := 80.0
+	var start_angle := -PI / 2
+	var end_angle := start_angle + (2 * PI * _current_progress)
+
+	# Draw background ring
+	_progress_ring.draw_arc(center, radius, 0, 2 * PI, 64, Color(1, 1, 1, 0.3), 8.0)
+
+	# Draw progress arc
+	var progress_color := Color(0.2, 1.0, 0.4) if _current_progress >= 1.0 else Color(1.0, 0.8, 0.2)
+	_progress_ring.draw_arc(center, radius, start_angle, end_angle, 64, progress_color, 10.0)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -107,6 +208,23 @@ func _setup_timers() -> void:
 func _setup_gesture_connections() -> void:
 	if GestureDetector:
 		GestureDetector.gesture_detected.connect(_on_gesture_detected)
+		GestureDetector.gesture_progress.connect(_on_gesture_progress)
+		GestureDetector.landmarks_updated.connect(_on_landmarks_updated)
+
+
+func _on_landmarks_updated(left_hand: Array, right_hand: Array) -> void:
+	_left_landmarks = left_hand
+	_right_landmarks = right_hand
+	if _hand_draw:
+		_hand_draw.queue_redraw()
+
+
+func _on_gesture_progress(gesture_type: Enums.InteractionType, progress: float) -> void:
+	if is_waiting_for_interaction and gesture_type == current_interaction_type:
+		_current_progress = progress
+		if _progress_ring:
+			_progress_ring.visible = progress > 0
+			_progress_ring.queue_redraw()
 
 
 func load_panels(panel_data_array: Array[PanelData]) -> void:
@@ -308,14 +426,22 @@ func _complete_interaction() -> void:
 	if interaction_prompt:
 		interaction_prompt.hide()
 
-	# Hide action UI
+	# Hide action UI and progress ring
 	_hide_action_text()
+	_current_progress = 0.0
+	if _progress_ring:
+		_progress_ring.visible = false
+
+	# Play success effect
+	_play_success_effect()
 
 	interaction_completed.emit(current_interaction_type)
 
 	is_waiting_for_interaction = false
 	current_interaction_type = Enums.InteractionType.NONE
 
+	# Wait for success effect before transitioning
+	await get_tree().create_timer(0.5).timeout
 	_transition_to_next_panel()
 
 
@@ -413,3 +539,14 @@ func _show_action_text(text: String) -> void:
 func _hide_action_text() -> void:
 	if _action_bg:
 		_action_bg.visible = false
+
+
+func _play_success_effect() -> void:
+	if not _success_overlay:
+		return
+
+	# Flash white then fade out
+	var tween := create_tween()
+	tween.tween_property(_success_overlay, "color", Color(1, 1, 1, 0.6), 0.1)
+	tween.tween_property(_success_overlay, "color", Color(0.4, 1, 0.4, 0.4), 0.15)
+	tween.tween_property(_success_overlay, "color", Color(1, 1, 1, 0), 0.25)
