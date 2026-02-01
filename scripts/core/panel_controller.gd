@@ -25,13 +25,66 @@ var _fallback_timer: Timer
 var _is_transitioning: bool = false
 var _panel_started: bool = false  # Guard against rapid panel starts
 
+# Bottom UI for action text
+var _action_ui: CanvasLayer
+var _action_label: Label
+var _action_bg: ColorRect
+
 
 func _ready() -> void:
 	_setup_timers()
 	_setup_gesture_connections()
+	_setup_action_ui()
 
 	if auto_start and panels.size() > 0:
 		call_deferred("_start_panel", 0)
+
+
+func _setup_action_ui() -> void:
+	# Create CanvasLayer for UI
+	_action_ui = CanvasLayer.new()
+	_action_ui.layer = 10
+	add_child(_action_ui)
+
+	# Background panel at bottom (200px tall)
+	_action_bg = ColorRect.new()
+	_action_bg.color = Color(0, 0, 0, 0.85)
+	_action_bg.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_action_bg.offset_top = -200
+	_action_bg.offset_bottom = 0
+	_action_ui.add_child(_action_bg)
+
+	# Action text label
+	_action_label = Label.new()
+	_action_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_action_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_action_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_action_label.add_theme_font_size_override("font_size", 42)
+	_action_label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
+	_action_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_action_bg.add_child(_action_label)
+
+	# Initially hidden
+	_action_bg.visible = false
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	# Space or click to advance non-interactive panels
+	var should_advance := false
+
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_SPACE:
+			should_advance = true
+	elif event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			should_advance = true
+
+	if should_advance:
+		# Only allow manual advance for non-interactive panels
+		if not is_waiting_for_interaction:
+			_panel_timer.stop()
+			_transition_to_next_panel()
+			get_viewport().set_input_as_handled()
 
 
 func _setup_timers() -> void:
@@ -93,10 +146,12 @@ func _create_panel_node(panel_data: PanelData, index: int) -> Node2D:
 
 	var is_placeholder := false
 	if panel_data.background_path != "" and ResourceLoader.exists(panel_data.background_path):
+		print("Loading background: ", panel_data.background_path)
 		bg_sprite.texture = load(panel_data.background_path)
 	else:
 		# Create placeholder colored rectangle
-		var placeholder := _create_placeholder_texture(panel_data.panel_width, 1080, index)
+		print("Background not found: ", panel_data.background_path, " - using placeholder")
+		var placeholder := _create_placeholder_texture(panel_data.panel_width, 1024, index)
 		bg_sprite.texture = placeholder
 		is_placeholder = true
 
@@ -107,7 +162,7 @@ func _create_panel_node(panel_data: PanelData, index: int) -> Node2D:
 		var label_container := Control.new()
 		label_container.name = "LabelContainer"
 		label_container.set_anchors_preset(Control.PRESET_FULL_RECT)
-		label_container.size = Vector2(panel_data.panel_width, 1080)
+		label_container.size = Vector2(panel_data.panel_width, 1024)
 
 		var label := Label.new()
 		label.name = "DescriptionLabel"
@@ -198,7 +253,7 @@ func _start_panel(index: int) -> void:
 	# Move camera to panel
 	var target_x: float = _calculate_panel_camera_x(index)
 	camera.position.x = target_x
-	camera.position.y = 540  # Center vertically
+	camera.position.y = 512  # Center vertically (1024/2)
 
 	print("Panel %d" % index)  # Clean output
 
@@ -224,7 +279,15 @@ func _start_interaction_wait(panel_data: PanelData) -> void:
 	is_waiting_for_interaction = true
 	current_interaction_type = panel_data.interaction_type
 
+	# Tell gesture detector what gesture we're expecting
+	if GestureDetector:
+		GestureDetector.expected_gesture = panel_data.interaction_type
+
 	interaction_required.emit(panel_data.interaction_type)
+
+	# Show action UI with hint text
+	var hint_text := panel_data.interaction_hint if panel_data.interaction_hint != "" else _get_default_hint(current_interaction_type)
+	_show_action_text(hint_text)
 
 	# Start hint timer
 	if panel_data.hint_delay > 0:
@@ -244,6 +307,9 @@ func _complete_interaction() -> void:
 
 	if interaction_prompt:
 		interaction_prompt.hide()
+
+	# Hide action UI
+	_hide_action_text()
 
 	interaction_completed.emit(current_interaction_type)
 
@@ -309,11 +375,11 @@ func _on_hint_timer_timeout() -> void:
 func _get_default_hint(interaction_type: Enums.InteractionType) -> String:
 	match interaction_type:
 		Enums.InteractionType.CATCH:
-			return "Raise both hands to catch"
+			return "Show both open palms to catch"
 		Enums.InteractionType.PASS:
-			return "Push forward to pass"
+			return "Show open palm to pass"
 		Enums.InteractionType.BALLOON:
-			return "Gently push forward"
+			return "Show open palm to pass the balloon"
 		_:
 			return ""
 
@@ -336,3 +402,14 @@ func debug_advance() -> void:
 	else:
 		_panel_timer.stop()
 		_transition_to_next_panel()
+
+
+func _show_action_text(text: String) -> void:
+	if _action_label and _action_bg:
+		_action_label.text = text
+		_action_bg.visible = true
+
+
+func _hide_action_text() -> void:
+	if _action_bg:
+		_action_bg.visible = false

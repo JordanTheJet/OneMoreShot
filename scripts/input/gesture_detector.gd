@@ -1,36 +1,24 @@
 extends Node
 
 ## Gesture recognition from hand landmark data
+## Simplified MVP: Uses MediaPipe's built-in gesture recognition
 
 signal gesture_detected(gesture_type: Enums.InteractionType)
 signal gesture_progress(gesture_type: Enums.InteractionType, progress: float)
 signal hands_detected(count: int)
 
-# Gesture thresholds
-const CATCH_Y_THRESHOLD := 0.4  # Hands must be above this Y (0=top, 1=bottom)
-const CATCH_HOLD_TIME := 0.3  # Seconds hands must be raised
-
-const PASS_Z_FRAMES := 5  # Frames of forward motion required
-const PASS_Z_VELOCITY_THRESHOLD := 0.02  # Z change per frame threshold
-
-const BALLOON_Z_FRAMES := 8  # Frames of gentle forward motion
-const BALLOON_Z_VELOCITY_MIN := 0.005  # Minimum velocity
-const BALLOON_Z_VELOCITY_MAX := 0.015  # Maximum velocity (slower than pass)
+# Hold time for gesture confirmation
+const GESTURE_HOLD_TIME := 0.5  # Seconds to hold gesture
 
 var hand_tracking: HandTracking
 var is_enabled: bool = true
 
-# Tracking state
-var _left_hand_history: Array[Dictionary] = []
-var _right_hand_history: Array[Dictionary] = []
-var _history_max_size: int = 30
+# Current expected gesture (set by panel controller)
+var expected_gesture: Enums.InteractionType = Enums.InteractionType.NONE
 
-# Catch gesture state
-var _catch_start_time: float = 0.0
-var _is_catching: bool = false
-
-# Pass/Balloon gesture state
-var _forward_motion_frames: int = 0
+# Gesture timing state
+var _gesture_start_time: float = 0.0
+var _current_gesture_type: Enums.InteractionType = Enums.InteractionType.NONE
 
 
 func _ready() -> void:
@@ -63,148 +51,61 @@ func _on_tracking_lost() -> void:
 
 
 func _reset_gesture_state() -> void:
-	_left_hand_history.clear()
-	_right_hand_history.clear()
-	_is_catching = false
-	_catch_start_time = 0.0
-	_forward_motion_frames = 0
+	_gesture_start_time = 0.0
+	_current_gesture_type = Enums.InteractionType.NONE
 
 
 func _on_landmarks_received(data: Dictionary) -> void:
 	if not is_enabled:
 		return
 
-	var left_hand: Dictionary = data.get("left_hand", {})
-	var right_hand: Dictionary = data.get("right_hand", {})
+	var num_hands: int = data.get("num_hands", 0)
+	hands_detected.emit(num_hands)
 
-	var hand_count := 0
-	if not left_hand.is_empty():
-		hand_count += 1
-	if not right_hand.is_empty():
-		hand_count += 1
+	# Get gesture data from Python bridge
+	var gestures: Dictionary = data.get("gestures", {})
+	var left_gesture: String = gestures.get("left", "None")
+	var right_gesture: String = gestures.get("right", "None")
+	var two_open_palms: bool = data.get("two_open_palms", false)
 
-	hands_detected.emit(hand_count)
+	# Determine what gesture is being performed
+	var detected_type := Enums.InteractionType.NONE
 
-	# Update history
-	_update_hand_history(left_hand, right_hand)
+	# Check for any open palm
+	var has_open_palm := left_gesture == "Open_Palm" or right_gesture == "Open_Palm"
 
-	# Check for gestures
-	_check_catch_gesture(left_hand, right_hand)
-	_check_forward_gestures(left_hand, right_hand)
-
-
-func _update_hand_history(left: Dictionary, right: Dictionary) -> void:
-	if not left.is_empty():
-		_left_hand_history.push_back(left.duplicate())
-		if _left_hand_history.size() > _history_max_size:
-			_left_hand_history.pop_front()
-
-	if not right.is_empty():
-		_right_hand_history.push_back(right.duplicate())
-		if _right_hand_history.size() > _history_max_size:
-			_right_hand_history.pop_front()
-
-
-func _check_catch_gesture(left: Dictionary, right: Dictionary) -> void:
-	## Catch: Both hands raised above threshold, palms facing camera
-
-	if left.is_empty() or right.is_empty():
-		_is_catching = false
-		return
-
-	var left_wrist_y: float = _get_landmark_y(left, 0)  # Wrist
-	var right_wrist_y: float = _get_landmark_y(right, 0)
-
-	# Check if both hands are raised (lower Y = higher on screen)
-	var both_raised := left_wrist_y < CATCH_Y_THRESHOLD and right_wrist_y < CATCH_Y_THRESHOLD
-
-	if both_raised:
-		if not _is_catching:
-			_is_catching = true
-			_catch_start_time = Time.get_ticks_msec() / 1000.0
+	# CATCH: Two open palms
+	if two_open_palms:
+		detected_type = Enums.InteractionType.CATCH
+	# PASS/BALLOON: Any open palm (one or two hands)
+	# Use expected_gesture to determine which one to emit
+	elif has_open_palm:
+		if expected_gesture == Enums.InteractionType.BALLOON:
+			detected_type = Enums.InteractionType.BALLOON
 		else:
-			var hold_time := Time.get_ticks_msec() / 1000.0 - _catch_start_time
-			var progress := clampf(hold_time / CATCH_HOLD_TIME, 0.0, 1.0)
-			gesture_progress.emit(Enums.InteractionType.CATCH, progress)
+			detected_type = Enums.InteractionType.PASS
 
-			if hold_time >= CATCH_HOLD_TIME:
-				print("CATCH gesture detected!")
-				gesture_detected.emit(Enums.InteractionType.CATCH)
+	# Check if gesture matches expected and track hold time
+	if detected_type != Enums.InteractionType.NONE:
+		if detected_type == _current_gesture_type:
+			# Continue holding
+			var hold_time := Time.get_ticks_msec() / 1000.0 - _gesture_start_time
+			var progress := clampf(hold_time / GESTURE_HOLD_TIME, 0.0, 1.0)
+			gesture_progress.emit(detected_type, progress)
+
+			if hold_time >= GESTURE_HOLD_TIME:
+				print("Gesture detected: ", Enums.InteractionType.keys()[detected_type])
+				gesture_detected.emit(detected_type)
 				_reset_gesture_state()
-	else:
-		_is_catching = false
-
-
-func _check_forward_gestures(left: Dictionary, right: Dictionary) -> void:
-	## Pass: Palm pushes forward quickly
-	## Balloon: Gentle forward motion (slower)
-
-	# Use either hand for forward gestures
-	var hand: Dictionary = right if not right.is_empty() else left
-	if hand.is_empty():
-		_forward_motion_frames = 0
-		return
-
-	var z_velocity := _calculate_z_velocity(hand)
-
-	if z_velocity > PASS_Z_VELOCITY_THRESHOLD:
-		_forward_motion_frames += 1
-
-		if _forward_motion_frames >= PASS_Z_FRAMES:
-			print("PASS gesture detected!")
-			gesture_detected.emit(Enums.InteractionType.PASS)
-			_reset_gesture_state()
 		else:
-			var progress := float(_forward_motion_frames) / PASS_Z_FRAMES
-			gesture_progress.emit(Enums.InteractionType.PASS, progress)
-
-	elif z_velocity > BALLOON_Z_VELOCITY_MIN and z_velocity < BALLOON_Z_VELOCITY_MAX:
-		_forward_motion_frames += 1
-
-		if _forward_motion_frames >= BALLOON_Z_FRAMES:
-			print("BALLOON gesture detected!")
-			gesture_detected.emit(Enums.InteractionType.BALLOON)
-			_reset_gesture_state()
-		else:
-			var progress := float(_forward_motion_frames) / BALLOON_Z_FRAMES
-			gesture_progress.emit(Enums.InteractionType.BALLOON, progress)
+			# New gesture started
+			_current_gesture_type = detected_type
+			_gesture_start_time = Time.get_ticks_msec() / 1000.0
+			gesture_progress.emit(detected_type, 0.0)
 	else:
-		# Reset if motion stops or reverses
-		if _forward_motion_frames > 0:
-			_forward_motion_frames = maxi(_forward_motion_frames - 2, 0)
-
-
-func _get_landmark_y(hand: Dictionary, index: int) -> float:
-	var landmarks: Array = hand.get("landmarks", [])
-	if index < landmarks.size():
-		return landmarks[index].get("y", 0.5)
-	return 0.5
-
-
-func _get_landmark_z(hand: Dictionary, index: int) -> float:
-	var landmarks: Array = hand.get("landmarks", [])
-	if index < landmarks.size():
-		return landmarks[index].get("z", 0.0)
-	return 0.0
-
-
-func _calculate_z_velocity(hand: Dictionary) -> float:
-	# Calculate forward motion velocity from palm center (landmark 9)
-	var history: Array[Dictionary] = _right_hand_history if hand == _right_hand_history.back() else _left_hand_history
-
-	if history.size() < 2:
-		return 0.0
-
-	var current_z := _get_landmark_z(hand, 9)  # Middle finger MCP
-	var prev_hand: Dictionary = history[-2] if history.size() >= 2 else {}
-
-	if prev_hand.is_empty():
-		return 0.0
-
-	var prev_z := _get_landmark_z(prev_hand, 9)
-
-	# Positive velocity = moving toward camera (forward push)
-	return prev_z - current_z
+		# No valid gesture
+		if _current_gesture_type != Enums.InteractionType.NONE:
+			_reset_gesture_state()
 
 
 ## Enable/disable gesture detection

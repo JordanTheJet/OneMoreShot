@@ -33,9 +33,9 @@ connected_clients: set = set()
 should_exit = False
 latest_frame_data: Optional[dict] = None
 
-# Model path
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "hand_landmarker.task")
-MODEL_URL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
+# Model path - using GestureRecognizer for gesture detection
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "gesture_recognizer.task")
+MODEL_URL = "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task"
 
 # Hand connections for drawing
 HAND_CONNECTIONS = [
@@ -88,21 +88,29 @@ def process_hand_landmarks(hand_landmarks, handedness: str) -> dict:
 
 
 def get_hand_data(result) -> dict:
-    """Extract hand data from MediaPipe results."""
+    """Extract hand data from MediaPipe GestureRecognizer results."""
     data = {
         "timestamp": 0,
         "left_hand": {},
         "right_hand": {},
-        "num_hands": 0
+        "num_hands": 0,
+        "gestures": {
+            "left": "None",
+            "right": "None"
+        },
+        "two_open_palms": False
     }
 
     if result.hand_landmarks and result.handedness:
         data["num_hands"] = len(result.hand_landmarks)
 
-        for hand_landmarks, handedness_info in zip(
+        left_gesture = "None"
+        right_gesture = "None"
+
+        for i, (hand_landmarks, handedness_info) in enumerate(zip(
             result.hand_landmarks,
             result.handedness
-        ):
+        )):
             # Get handedness label
             label = handedness_info[0].category_name
             # Flip left/right since camera mirrors
@@ -112,6 +120,20 @@ def get_hand_data(result) -> dict:
                 hand_landmarks,
                 actual_hand.replace("_hand", "")
             )
+
+            # Get gesture for this hand
+            if result.gestures and i < len(result.gestures) and result.gestures[i]:
+                gesture_name = result.gestures[i][0].category_name
+                if actual_hand == "left_hand":
+                    left_gesture = gesture_name
+                else:
+                    right_gesture = gesture_name
+
+        data["gestures"]["left"] = left_gesture
+        data["gestures"]["right"] = right_gesture
+
+        # Check for two open palms (CATCH gesture)
+        data["two_open_palms"] = (left_gesture == "Open_Palm" and right_gesture == "Open_Palm")
 
     return data
 
@@ -196,9 +218,9 @@ async def capture_and_process(camera_index: int, show_preview: bool):
     print(f"Camera {camera_index} opened successfully")
     print(f"Resolution: {int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))}x{int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))}")
 
-    # Create hand landmarker
+    # Create gesture recognizer
     base_options = mp_python.BaseOptions(model_asset_path=MODEL_PATH)
-    options = vision.HandLandmarkerOptions(
+    options = vision.GestureRecognizerOptions(
         base_options=base_options,
         running_mode=vision.RunningMode.IMAGE,
         num_hands=2,
@@ -207,7 +229,7 @@ async def capture_and_process(camera_index: int, show_preview: bool):
         min_tracking_confidence=0.5
     )
 
-    landmarker = vision.HandLandmarker.create_from_options(options)
+    recognizer = vision.GestureRecognizer.create_from_options(options)
 
     frame_count = 0
 
@@ -229,8 +251,8 @@ async def capture_and_process(camera_index: int, show_preview: bool):
             # Create MediaPipe Image
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
 
-            # Process with MediaPipe
-            result = landmarker.detect(mp_image)
+            # Process with MediaPipe GestureRecognizer
+            result = recognizer.recognize(mp_image)
 
             # Extract hand data
             data = get_hand_data(result)
@@ -251,6 +273,27 @@ async def capture_and_process(camera_index: int, show_preview: bool):
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2
                 )
 
+                # Show gestures
+                left_g = data['gestures']['left']
+                right_g = data['gestures']['right']
+                gesture_text = f"L: {left_g} | R: {right_g}"
+                cv2.putText(
+                    preview_frame, gesture_text, (10, 60),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2
+                )
+
+                # Show detected gesture
+                if data['two_open_palms']:
+                    cv2.putText(
+                        preview_frame, "CATCH! (2 palms)", (10, 100),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 3
+                    )
+                elif left_g == "Open_Palm" or right_g == "Open_Palm":
+                    cv2.putText(
+                        preview_frame, "1 HAND PASS", (10, 100),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 3
+                    )
+
                 cv2.imshow("Hand Tracking", preview_frame)
 
                 if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -261,7 +304,7 @@ async def capture_and_process(camera_index: int, show_preview: bool):
             await asyncio.sleep(1/30)
 
     finally:
-        landmarker.close()
+        recognizer.close()
         cap.release()
         if show_preview:
             cv2.destroyAllWindows()

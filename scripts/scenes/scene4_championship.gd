@@ -14,35 +14,38 @@ func _ready() -> void:
 func _setup_panels() -> void:
 	var panels: Array[PanelData] = []
 
-	# Panel 1: Championship game - wide arena shot
+	# Panel 1: Court lights
 	var panel1 := PanelData.new()
 	panel1.panel_id = "s4_p1_arena"
+	panel1.background_path = "res://assets/sprites/scene4/panel1_court_lights/background.png"
 	panel1.description = "SCENE 4 - THE CHAMPIONSHIP\n\nPresent day. Packed Boston arena.\nMarcus's team on court. D nearby.\nClock shows final seconds."
 	panel1.duration = 4.0
 	panel1.interaction_type = Enums.InteractionType.NONE
-	panel1.panel_width = 1920
+	panel1.panel_width = 1024
 	panel1.focus_point = Vector2(0.5, 0.5)
 	panel1.transition_to_next = Enums.TransitionType.PAN
 	panels.append(panel1)
 
-	# Panel 2: The final shot moment
+	# Panel 2: Wristband close-up
 	var panel2 := PanelData.new()
 	panel2.panel_id = "s4_p2_shot"
+	panel2.background_path = "res://assets/sprites/scene4/panel2_wristband/background.png"
 	panel2.description = "D passes to Marcus. Their eyes meet.\nMarcus catches it - a memory flashes:\nJeffrey's hands guiding his."
 	panel2.duration = 4.5
 	panel2.interaction_type = Enums.InteractionType.NONE
-	panel2.panel_width = 1920
+	panel2.panel_width = 1024
 	panel2.focus_point = Vector2(0.5, 0.5)
 	panel2.transition_to_next = Enums.TransitionType.PAN
 	panels.append(panel2)
 
-	# Panel 3: Resolution - looking up, remembering
+	# Panel 3: Face the court
 	var panel3 := PanelData.new()
 	panel3.panel_id = "s4_p3_resolution"
+	panel3.background_path = "res://assets/sprites/scene4/panel3_face_court/background.png"
 	panel3.description = "The ball swishes through the net.\nMarcus looks up at the sky.\nSmiling through tears.\n\n\"One more shot...\" (whispered)"
 	panel3.duration = 5.0
 	panel3.interaction_type = Enums.InteractionType.NONE
-	panel3.panel_width = 1920
+	panel3.panel_width = 1024
 	panel3.focus_point = Vector2(0.5, 0.5)
 	panel3.transition_to_next = Enums.TransitionType.FADE_BLACK
 	panels.append(panel3)
