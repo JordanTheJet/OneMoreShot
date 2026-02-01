@@ -17,7 +17,7 @@ func _setup_panels() -> void:
 	# Panel 1: Championship game - wide arena shot
 	var panel1 := PanelData.new()
 	panel1.panel_id = "s4_p1_arena"
-	panel1.description = "SCENE 4 - THE CHAMPIONSHIP\n\nYears later. Packed arena.\nPlayer (now grown) at free throw line.\nClock shows final seconds."
+	panel1.description = "SCENE 4 - THE CHAMPIONSHIP\n\nPresent day. Packed Boston arena.\nMarcus's team on court. D nearby.\nClock shows final seconds."
 	panel1.duration = 4.0
 	panel1.interaction_type = Enums.InteractionType.NONE
 	panel1.panel_width = 1920
@@ -28,7 +28,7 @@ func _setup_panels() -> void:
 	# Panel 2: The final shot moment
 	var panel2 := PanelData.new()
 	panel2.panel_id = "s4_p2_shot"
-	panel2.description = "Close-up: Player's focused face.\nAbout to take the shot.\nA memory flashes - father's hands guiding theirs."
+	panel2.description = "D passes to Marcus. Their eyes meet.\nMarcus catches it - a memory flashes:\nJeffrey's hands guiding his."
 	panel2.duration = 4.5
 	panel2.interaction_type = Enums.InteractionType.NONE
 	panel2.panel_width = 1920
@@ -39,7 +39,7 @@ func _setup_panels() -> void:
 	# Panel 3: Resolution - looking up, remembering
 	var panel3 := PanelData.new()
 	panel3.panel_id = "s4_p3_resolution"
-	panel3.description = "The ball swishes through the net.\nPlayer looks up at the sky.\nSmiling through tears.\n\n\"One more shot, for you.\""
+	panel3.description = "The ball swishes through the net.\nMarcus looks up at the sky.\nSmiling through tears.\n\n\"One more shot...\" (whispered)"
 	panel3.duration = 5.0
 	panel3.interaction_type = Enums.InteractionType.NONE
 	panel3.panel_width = 1920

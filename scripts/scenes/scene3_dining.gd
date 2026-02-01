@@ -28,7 +28,7 @@ func _setup_panels() -> void:
 	# Panel 2: Family gathering
 	var panel2 := PanelData.new()
 	panel2.panel_id = "s3_p2_family"
-	panel2.description = "Family gathered around the table.\nForced smiles, subdued atmosphere.\nOne chair conspicuously empty."
+	panel2.description = "Family gathered around the table.\nMom trying to hold it together.\nMarcus, relatives. One chair empty."
 	panel2.duration = 3.0
 	panel2.interaction_type = Enums.InteractionType.NONE
 	panel2.panel_width = 1920
@@ -39,7 +39,7 @@ func _setup_panels() -> void:
 	# Panel 3: Quiet moment - empty chair or meaningful detail
 	var panel3 := PanelData.new()
 	panel3.panel_id = "s3_p3_absence"
-	panel3.description = "Close-up: The empty chair.\nA framed photo nearby.\nFather's absence deeply felt."
+	panel3.description = "Close-up: The empty chair.\nA framed photo of Jeffrey nearby.\nMom's hand resting near it."
 	panel3.duration = 4.0
 	panel3.interaction_type = Enums.InteractionType.NONE
 	panel3.panel_width = 1920

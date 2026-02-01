@@ -16,7 +16,7 @@ func _setup_panels() -> void:
 	# Panel 1: Wide shot - basketball court
 	var panel1 := PanelData.new()
 	panel1.panel_id = "s2_p1_court_wide"
-	panel1.description = "SCENE 2 - THE COURT\n\nWide shot: Outdoor basketball court.\nGolden hour lighting, long shadows.\nFather and child visible in distance."
+	panel1.description = "SCENE 2 - THE COURT\n\nWide shot: Boston outdoor basketball court.\nGolden hour lighting, long shadows.\nJeffrey and young Marcus visible in distance."
 	panel1.duration = 3.0
 	panel1.interaction_type = Enums.InteractionType.NONE
 	panel1.panel_width = 1920
@@ -27,7 +27,7 @@ func _setup_panels() -> void:
 	# Panel 2: Father coaching/teaching
 	var panel2 := PanelData.new()
 	panel2.panel_id = "s2_p2_coaching"
-	panel2.description = "Father demonstrating shooting form.\nHands guiding the child's arms.\nPatient, encouraging expression."
+	panel2.description = "Jeffrey demonstrating shooting form.\nHands guiding Marcus's arms.\nPatient, encouraging big brother."
 	panel2.duration = 3.0
 	panel2.interaction_type = Enums.InteractionType.NONE
 	panel2.panel_width = 1920
@@ -49,7 +49,7 @@ func _setup_panels() -> void:
 	# Panel 4: Emotional beat - connection moment
 	var panel4 := PanelData.new()
 	panel4.panel_id = "s2_p4_connection"
-	panel4.description = "Father and child sitting on court, resting.\nSharing a water bottle.\nSun setting behind them."
+	panel4.description = "Jeffrey and Marcus sitting on court, resting.\nSharing a water bottle.\nSun setting behind them. Brothers."
 	panel4.duration = 3.5
 	panel4.interaction_type = Enums.InteractionType.NONE
 	panel4.panel_width = 1920
@@ -60,7 +60,7 @@ func _setup_panels() -> void:
 	# Panel 5: Pass the ball - PASS interaction
 	var panel5 := PanelData.new()
 	panel5.panel_id = "s2_p5_pass"
-	panel5.description = "Father ready to receive a pass.\nArms open, encouraging smile.\nWaiting for the ball.\n\n[PASS - Push forward]"
+	panel5.description = "Jeffrey ready to receive a pass.\nArms open, encouraging smile.\nWaiting for the ball.\n\n[PASS - Push forward]"
 	panel5.duration = 0.0  # Wait for interaction
 	panel5.interaction_type = Enums.InteractionType.PASS
 	panel5.panel_width = 1920
