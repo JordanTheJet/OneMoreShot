@@ -16,6 +16,7 @@ func _setup_panels() -> void:
 	# Panel 1: Wide shot - locker room establishing
 	var panel1 := PanelData.new()
 	panel1.panel_id = "s1_p1_establishing"
+	panel1.description = "SCENE 1 - THE LOCKER ROOM\n\nWide shot: Empty high school locker room.\nRows of lockers, wooden benches.\nLate afternoon light through high windows."
 	panel1.duration = 3.5
 	panel1.interaction_type = Enums.InteractionType.NONE
 	panel1.panel_width = 1920
@@ -26,6 +27,7 @@ func _setup_panels() -> void:
 	# Panel 2: Father figure in doorway
 	var panel2 := PanelData.new()
 	panel2.panel_id = "s1_p2_father"
+	panel2.description = "Father stands in doorway, silhouette against hallway light.\nHolding a basketball.\nWarm, inviting posture."
 	panel2.duration = 3.0
 	panel2.interaction_type = Enums.InteractionType.NONE
 	panel2.panel_width = 1920
@@ -36,6 +38,7 @@ func _setup_panels() -> void:
 	# Panel 3: Close-up of character's face
 	var panel3 := PanelData.new()
 	panel3.panel_id = "s1_p3_closeup"
+	panel3.description = "Close-up: Young player's face.\nLooking up with hope and admiration.\nEyes reflecting the light from the doorway."
 	panel3.duration = 2.5
 	panel3.interaction_type = Enums.InteractionType.NONE
 	panel3.panel_width = 1920
@@ -46,6 +49,7 @@ func _setup_panels() -> void:
 	# Panel 4: Ball being tossed - CATCH interaction
 	var panel4 := PanelData.new()
 	panel4.panel_id = "s1_p4_catch"
+	panel4.description = "Father tosses the basketball toward camera.\nBall mid-air, coming toward viewer.\n\n[CATCH - Raise both hands]"
 	panel4.duration = 0.0  # Wait for interaction
 	panel4.interaction_type = Enums.InteractionType.CATCH
 	panel4.panel_width = 1920

@@ -91,14 +91,42 @@ func _create_panel_node(panel_data: PanelData, index: int) -> Node2D:
 	bg_sprite.name = "Background"
 	bg_sprite.centered = false
 
+	var is_placeholder := false
 	if panel_data.background_path != "" and ResourceLoader.exists(panel_data.background_path):
 		bg_sprite.texture = load(panel_data.background_path)
 	else:
 		# Create placeholder colored rectangle
 		var placeholder := _create_placeholder_texture(panel_data.panel_width, 1080, index)
 		bg_sprite.texture = placeholder
+		is_placeholder = true
 
 	panel_node.add_child(bg_sprite)
+
+	# Add description label for placeholders
+	if is_placeholder and panel_data.description != "":
+		var label_container := Control.new()
+		label_container.name = "LabelContainer"
+		label_container.set_anchors_preset(Control.PRESET_FULL_RECT)
+		label_container.size = Vector2(panel_data.panel_width, 1080)
+
+		var label := Label.new()
+		label.name = "DescriptionLabel"
+		label.text = panel_data.description
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.set_anchors_preset(Control.PRESET_CENTER)
+		label.grow_horizontal = Control.GROW_DIRECTION_BOTH
+		label.grow_vertical = Control.GROW_DIRECTION_BOTH
+		label.custom_minimum_size = Vector2(panel_data.panel_width - 200, 400)
+		label.add_theme_font_size_override("font_size", 48)
+		label.add_theme_color_override("font_color", Color(1, 1, 1, 0.9))
+		label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.5))
+		label.add_theme_constant_override("shadow_offset_x", 3)
+		label.add_theme_constant_override("shadow_offset_y", 3)
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+
+		label_container.add_child(label)
+		panel_node.add_child(label_container)
 
 	# Create foreground layers with parallax
 	for j in range(panel_data.foreground_layers.size()):

@@ -117,14 +117,12 @@ func _end_game() -> void:
 	print("Game completed!")
 	_set_state(Enums.GameState.ENDED)
 
-	# Fade to black and stay
-	await TransitionManager.fade_to_black(1.5)
-
-	# Could show credits or return to title here
-	await get_tree().create_timer(2.0).timeout
-
-	# For now, quit or restart
-	# get_tree().quit()
+	# Transition to end screen
+	await TransitionManager.transition_to_scene(
+		"res://scenes/end_screen.tscn",
+		Enums.TransitionType.FADE_BLACK,
+		1.5
+	)
 
 
 func _debug_advance() -> void:

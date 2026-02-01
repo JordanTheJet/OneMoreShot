@@ -7,6 +7,9 @@ extends Resource
 ## Unique identifier for this panel
 @export var panel_id: String = ""
 
+## Description of what this panel should show (displayed on placeholder)
+@export var description: String = ""
+
 ## Display duration in seconds (ignored if interaction required)
 @export var duration: float = 3.0
 
