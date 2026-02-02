@@ -49,30 +49,30 @@ func _setup_panels() -> void:
 	panel3.transition_to_next = Enums.TransitionType.PAN
 	panels.append(panel3)
 
-	# Panel 4: Jeffrey ready position
+	# Panel 4: Jeffrey ready position - PASS interaction
 	var panel4 := PanelData.new()
-	panel4.panel_id = "s2_p4_connection"
+	panel4.panel_id = "s2_p4_pass"
 	panel4.background_path = "res://assets/sprites/scene2/panel4_jeffrey_ready/background.png"
-	panel4.description = "Jeffrey and Marcus sitting on court, resting.\nSharing a water bottle.\nSun setting behind them. Brothers."
-	panel4.duration = 3.5
-	panel4.interaction_type = Enums.InteractionType.NONE
+	panel4.description = "Jeffrey ready to receive a pass.\nArms open, encouraging smile.\nWaiting for the ball.\n\n[PASS - Open palm]"
+	panel4.duration = 0.0  # Wait for interaction
+	panel4.interaction_type = Enums.InteractionType.PASS
 	panel4.panel_width = 1024
 	panel4.focus_point = Vector2(0.5, 0.5)
+	panel4.interaction_hint = "Open palm to pass"
+	panel4.hint_delay = 5.0
+	panel4.fallback_timeout = 15.0
 	panel4.transition_to_next = Enums.TransitionType.PAN
 	panels.append(panel4)
 
-	# Panel 5: Pass the ball - PASS interaction
+	# Panel 5: The shot - auto-advance after pass
 	var panel5 := PanelData.new()
-	panel5.panel_id = "s2_p5_pass"
+	panel5.panel_id = "s2_p5_shot"
 	panel5.background_path = "res://assets/sprites/scene2/panel5_jeffrey_shot/background.png"
-	panel5.description = "Jeffrey ready to receive a pass.\nArms open, encouraging smile.\nWaiting for the ball.\n\n[PASS - Push forward]"
-	panel5.duration = 0.0  # Wait for interaction
-	panel5.interaction_type = Enums.InteractionType.PASS
+	panel5.description = "Jeffrey takes the shot.\nPerfect form, ball releasing.\nGolden light catches the moment."
+	panel5.duration = 3.0
+	panel5.interaction_type = Enums.InteractionType.NONE
 	panel5.panel_width = 1024
 	panel5.focus_point = Vector2(0.5, 0.5)
-	panel5.interaction_hint = "Push forward to pass"
-	panel5.hint_delay = 5.0
-	panel5.fallback_timeout = 15.0
 	panels.append(panel5)
 
 	panel_controller.load_panels(panels)
